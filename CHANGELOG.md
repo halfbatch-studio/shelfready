@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 (2026-11-21)
+
+- `shelf listing <App Store link>` and the MCP tool `listing`: check a live app without its repo. Reads the listing (privacy label, links, EU trader details), then checks that the privacy policy and support page load, the policy names a contact and a date, trader details are complete, German and Austrian traders link an Impressum, and the label covers the SDKs the policy names (from the knowledge base). It also warns when an app charges money but isn't declared as a trader.
+- shelfready.dev/check: the same check in the browser, from a form on the home page. Served by a small Worker (`/api/check`) that stores nothing and caches results for an hour.
+
 ## 0.2.1 (2026-11-21)
 
 - `shelf checklist`: live-page items show as "not checked" (`?`) instead of open when you run without `--online`, and the summary says how many weren't checked.

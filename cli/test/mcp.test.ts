@@ -51,7 +51,7 @@ test("mcp: handshake, server info and instructions", () => {
 
 test("mcp: lists every tool with a schema and annotations", async () => {
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["app_privacy", "check", "checklist", "init", "migrate", "pages", "scan", "sdk_info", "tick"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["app_privacy", "check", "checklist", "init", "listing", "migrate", "pages", "scan", "sdk_info", "tick"]);
   for (const t of tools) {
     assert.equal(t.inputSchema.type, "object", t.name);
     assert.ok(t.description && t.description.length > 40, t.name);

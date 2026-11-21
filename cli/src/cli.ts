@@ -4,7 +4,7 @@ import { join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { createRequire } from "node:module";
 import { Command, Option } from "commander";
-import { addAgentsNote, agentsNoteFile, type AgentsNoteResult, appPrivacy, check, checklist, checklistMarkdown, checklistSummary, checkOnline, CURRENT_VERSION, setTicks, factsToYAML, initFacts, legalView, migrateFile, pageFiles, readFacts, scan } from "./index.js";
+import { addAgentsNote, agentsNoteFile, type AgentsNoteResult, appPrivacy, check, checklist, checklistMarkdown, checklistSummary, checkOnline, CURRENT_VERSION, checkListing, knowledgeBase, setTicks, factsToYAML, initFacts, legalView, migrateFile, pageFiles, readFacts, scan } from "./index.js";
 
 const program = new Command()
   .name("shelf")
@@ -87,6 +87,29 @@ program
     console.log(`Wrote ${out}`);
     for (const n of result.notes) console.log(n.replace("generate the pages", "run `shelf pages`"));
     await offerAgentsNote(path, o.agentsNote);
+  });
+
+program
+  .command("listing")
+  .description("Check a live App Store listing from the outside: privacy policy, support page, EU trader details, and whether the privacy label covers the SDKs the policy names.")
+  .argument("<app>", "App Store link or numeric app ID")
+  .option("--json", "print the report as JSON")
+  .action(async (app: string, o: { json?: boolean }) => {
+    let report;
+    try {
+      report = await checkListing(app, { fetch, kb: knowledgeBase() });
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exit(1);
+    }
+    if (o.json) return console.log(JSON.stringify(report, null, 2));
+    const mark = { ok: "✓", warn: "!", error: "✗", info: "i" } as const;
+    console.log(`${report.app.title} by ${report.app.seller}\n${report.app.url}\n`);
+    for (const f of report.findings) {
+      console.log(`  ${mark[f.level]} ${f.title}${f.detail ? `\n      ${f.detail}` : ""}${f.level !== "ok" && f.fix ? `\n      → ${f.fix}` : ""}`);
+    }
+    console.log(`\n${report.passed} of ${report.total} checks pass. This only sees the public listing; \`shelf check\` in the app's repo goes further.`);
+    if (report.findings.some((f) => f.level === "error")) process.exitCode = 1;
   });
 
 program

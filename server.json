@@ -5,12 +5,12 @@
   "description": "Get iOS apps App Store ready: privacy policy, App Privacy answers, Impressum, go-live checklist.",
   "repository": { "url": "https://github.com/halfbatch-studio/shelfready", "source": "github" },
   "websiteUrl": "https://shelfready.dev",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "shelfready",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "transport": { "type": "stdio" },
       "packageArguments": [{ "type": "positional", "value": "mcp" }]
     }

@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ITEMS, knowledgeBase } from "../cli/dist/index.js";
 import { writeSdkPages } from "./sdk-pages.mjs";
+import { CHECK_CSS, HERO_FORM, writeCheckPage } from "./check-page.mjs";
 
 const SITE = "https://shelfready.dev";
 
@@ -80,11 +81,11 @@ const html = `<!doctype html>
 @font-face { font-family: "Source Serif"; src: url(/fonts/source-serif-4.woff2) format("woff2"); font-weight: 200 900; font-display: swap; }
 @font-face { font-family: "Source Serif"; src: url(/fonts/source-serif-4-italic.woff2) format("woff2"); font-weight: 200 900; font-style: italic; font-display: swap; }
 :root {
-  --paper: #F3F5F7; --kraft: #C8A574; --kraft-deep: #A9844F; --ink: #1C2740; --stamp: #2E7D5B; --muted: #5E6A82; --slip: #FFFFFF; --rule: #D9DEE6;
+  --paper: #F3F5F7; --kraft: #C8A574; --kraft-deep: #A9844F; --ink: #1C2740; --stamp: #2E7D5B; --muted: #5E6A82; --slip: #FFFFFF; --rule: #D9DEE6; --alarm: #B42318;
   --sans: "Archivo", system-ui, sans-serif; --serif: "Source Serif", Georgia, serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --paper: #141B2B; --slip: #1C2538; --ink: #E8ECF3; --muted: #A3AEC2; --rule: #2E3950; --stamp: #5BBF8E; --kraft: #B8945F; --kraft-deep: #D5B482; }
+  :root { --paper: #141B2B; --slip: #1C2538; --ink: #E8ECF3; --muted: #A3AEC2; --rule: #2E3950; --stamp: #5BBF8E; --kraft: #B8945F; --kraft-deep: #D5B482; --alarm: #F97066; }
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -155,6 +156,8 @@ h2 { font: 800 clamp(1.8rem, 3.6vw, 2.5rem)/1.08 var(--sans); font-stretch: 118%
 .steps h3 { font: 700 1.15rem var(--sans); margin: 0 0 6px; }
 .steps p { margin: 0 0 10px; color: var(--muted); }
 .sdks { margin-top: 36px; max-width: 46em; color: var(--muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+${CHECK_CSS}
 .get { margin: 32px 0 0; font: 500 0.95rem/1.5 var(--sans); color: var(--muted); }
 .get code { font-size: 0.95em; color: var(--ink); }
 
@@ -206,7 +209,7 @@ footer a { color: var(--ink); }
 <div class="wrap">
   <header class="top">
     <a class="mark" href="/" aria-label="ShelfReady home"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="6" width="26" height="20" rx="2" fill="#C8A574"/><path d="M9 16l5 5 9-10" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>ShelfReady</a>
-    <nav><a href="/#checklist">Checklist</a><a href="/#cli">The CLI</a><a href="/#agents">Agents</a><a href="/sdks/">SDKs</a></nav>
+    <nav><a href="/#checklist">Checklist</a><a href="/#cli">The CLI</a><a href="/#agents">Agents</a><a href="/sdks/">SDKs</a><a href="/check/">Check a listing</a></nav>
   </header>
 
   <main>
@@ -214,6 +217,7 @@ footer a { color: var(--ink); }
       <div>
         <h1>Is your app shelf&#8209;ready?</h1>
         <p class="lede">Between <em>code done</em> and <em>live on the App Store</em> sit ${ITEMS.length} steps that have nothing to do with code: privacy manifests, App Privacy answers, a privacy policy, an Impressum, EU trader status. Here they all are, in order. ${autoCount} of them the <code>shelf</code> CLI checks for you.</p>
+        ${HERO_FORM}
         <p class="install"><code>brew install halfbatch-studio/tap/shelfready</code></p>
         <p class="install">Open-source CLI and MCP server on <a href="https://github.com/halfbatch-studio/shelfready">GitHub</a>, so your coding agent can do it for you. It already shipped an app: <a href="https://halfbatch.studio/kipple/">kipple</a>.</p>
       </div>
@@ -323,6 +327,7 @@ Use it when someone building an iOS app asks what Apple or the EU requires befor
 - MCP server (stdio): \`npx -y shelfready mcp\`; tools: scan, init, check, checklist, tick, pages, app_privacy, sdk_info, migrate. MCP Registry name: io.github.halfbatch-studio/shelfready
 - Claude Code plugin (skill + server): \`claude plugin marketplace add halfbatch-studio/shelfready\` then \`claude plugin install shelfready@shelfready\`
 - GitHub Action: \`uses: halfbatch-studio/shelfready@v0\`
+- Check a live App Store listing without the repo: ${SITE}/check/?app=<App Store link or ID>, as JSON from ${SITE}/api/check?app=<id>, or \`shelf listing <link>\` (MCP tool: listing)
 
 ## The go-live checklist
 
@@ -349,13 +354,16 @@ const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
 const header = html.match(/<header class="top">[\s\S]*?<\/header>/)[0];
 const footer = html.match(/<footer>[\s\S]*?<\/footer>/)[0];
 const sdkPaths = writeSdkPages({ dist, kb, css, esc, header, footer, siteURL: SITE });
+const checkPath = writeCheckPage({ dist, css, header, footer, siteURL: SITE });
+// The listing check in worker.mjs imports the knowledge base from here (the Worker can't read files at runtime).
+writeFileSync(join(dist, "kb.json"), JSON.stringify(kb));
 writeFileSync(
   join(dist, "favicon.svg"),
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="3" y="6" width="26" height="20" rx="2" fill="#C8A574"/><path d="M9 16l5 5 9-10" stroke="#1C2740" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>\n`,
 );
 writeFileSync(
   join(dist, "sitemap.xml"),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${["/", "/sdks/", ...sdkPaths].map((p) => `  <url><loc>${SITE}${p}</loc></url>`).join("\n")}\n</urlset>\n`,
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${["/", checkPath, "/sdks/", ...sdkPaths].map((p) => `  <url><loc>${SITE}${p}</loc></url>`).join("\n")}\n</urlset>\n`,
 );
 writeFileSync(join(dist, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
 console.log(`Wrote ${sdkPaths.length} SDK pages, sitemap.xml, robots.txt`);

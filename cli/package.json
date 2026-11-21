@@ -1,6 +1,6 @@
 {
   "name": "shelfready",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Get an iOS app ready for the App Store: legal pages, App Privacy answers, privacy manifests and a go-live checklist. CLI and MCP server for coding agents.",
   "type": "module",
   "bin": {

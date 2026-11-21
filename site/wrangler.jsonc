@@ -15,6 +15,7 @@
     "not_found_handling": "404-page"
   },
   "routes": [{ "pattern": "shelfready.dev", "custom_domain": true }],
-  // Pull requests get a preview URL (npx wrangler preview); production stays on shelfready.dev.
-  "previews": {}
+  // Pull requests get a preview with its own URL; production stays on shelfready.dev and workers.dev stays off.
+  "previews": {},
+  "preview_urls": true
 }

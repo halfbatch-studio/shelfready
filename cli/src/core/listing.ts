@@ -207,6 +207,34 @@ export function htmlText(html: string): string {
     .trim();
 }
 
+/** What an Impressum contains (§ 5 DDG, § 25 MedienG), beyond the word itself. */
+const IMPRESSUM_CONTENT = /Impressum|Imprint|Legal notice|Handelsregister|Registergericht|Amtsgericht|Firmenbuch|\bHR[AB]\s?\d|USt-?Id|VAT[- ]ID|UID-?Nr|Geschäftsführ|Managing director|Vertretungsberechtigt|Inhaber|Verantwortlich i\.?\s?S\.?\s?d/i;
+const IMPRESSUM_LINK = /impressum|imprint|legal|kontakt|contact|about|ueber-uns|uber-uns|company/i;
+
+/** The landing page itself, or one of up to four same-site pages it links as Impressum/Legal/Contact/About, that holds Impressum content. */
+async function findImpressum(fetch: Fetch, home: Page): Promise<string | undefined> {
+  if (home.text && IMPRESSUM_CONTENT.test(home.text)) return home.url;
+  const base = new URL(home.url);
+  const site = base.hostname.replace(/^www\./, "");
+  const links = [...(home.html ?? "").matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+    .filter(([, href, text]) => IMPRESSUM_LINK.test(`${href} ${htmlText(text ?? "")}`))
+    .map(([, href]) => {
+      try {
+        return new URL(href!, base).toString();
+      } catch {
+        return "";
+      }
+    })
+    .filter((u) => u && new URL(u).hostname.replace(/^www\./, "") === site);
+  // Impressum and Legal links first, then Contact and About.
+  const ranked = [...new Set(links)].sort((a, b) => Number(!/impressum|imprint|legal/i.test(a)) - Number(!/impressum|imprint|legal/i.test(b))).slice(0, 4);
+  for (const url of ranked) {
+    const page = await getPage(fetch, url);
+    if (page.text && IMPRESSUM_CONTENT.test(page.text)) return url;
+  }
+  return undefined;
+}
+
 const EU_DE_AT = /\b(Germany|Deutschland|Austria|Österreich)\s*$/i;
 const DATE = /(\b\d{1,2}[./]\s?\d{1,2}[./]\s?\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\.?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Januar|Februar|März|Mai|Juni|Juli|Oktober|Dezember)\s+\d{4}\b|\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b)/i;
 
@@ -278,11 +306,11 @@ export async function checkListing(input: string, opts: { fetch: Fetch; kb?: Kno
     add({ level: "ok", rule: "trader.non-trader", title: "Declared as a non-trader, which fits a free app" });
   }
 
-  // Impressum for German and Austrian traders
+  // Impressum for German and Austrian traders: on the landing page, or one click away (Impressum, Legal, Contact, About).
   if (website) {
-    const hasImpressum = /impressum|imprint|legal notice|legal-notice/i.test(website.html ?? "");
-    if (hasImpressum) add({ level: "ok", rule: "impressum.web", title: "Website links an Impressum" });
-    else add({ level: "warn", rule: "impressum.web", title: "No Impressum on the developer website", detail: app.websiteURL, fix: "German and Austrian traders need an Impressum one click away, on the web and inside the app. `shelf pages` writes one." });
+    const found = await findImpressum(opts.fetch, website);
+    if (found) add({ level: "ok", rule: "impressum.web", title: "Impressum found on the developer website", detail: found });
+    else add({ level: "warn", rule: "impressum.web", title: "Couldn't find an Impressum on the developer website", detail: `Looked at ${app.websiteURL} and the pages it links as Impressum, Legal, Contact or About.`, fix: "German and Austrian traders need an Impressum one click from every page, on the web and inside the app. `shelf pages` writes one." });
   }
 
   // Privacy label vs what the policy names

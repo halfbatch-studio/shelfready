@@ -8,7 +8,7 @@ const POLICY = `<html><body><h1>Privacy policy</h1><p>Last updated: 18 November 
 
 function fakeFetch(pages: Record<string, { status?: number; body?: string; type?: string } | Error>): Fetch {
   return async (url) => {
-    const key = Object.keys(pages).find((k) => url.startsWith(k));
+    const key = Object.keys(pages).filter((k) => url.startsWith(k)).sort((a, b) => b.length - a.length)[0];
     const p = key ? pages[key] : { status: 404, body: "not found" };
     if (p instanceof Error) throw p;
     return new Response(p!.body ?? "", { status: p!.status ?? 200, headers: { "content-type": p!.type ?? "text/html" } });
@@ -73,6 +73,19 @@ test("listing: trader status against price and in-app purchases", async () => {
   assert.equal(rule(us, "impressum.web").length, 0);
   const noImpressum = await checkListing("1234567890", { fetch: site({ "https://example.com/": { body: "<p>Home</p>" } }) });
   assert.equal(rule(noImpressum, "impressum.web")[0]?.level, "warn");
+  // Impressum details on the Contact page count, as German courts accept a "Kontakt" link (the Things case).
+  const onContact = await checkListing("1234567890", {
+    fetch: site({
+      "https://example.com/contact/": { body: "<p>Example Apps GmbH, Musterstr. 1, Berlin. Geschäftsführer: A. Example. VAT-ID: DE123456789, AG Berlin, HRB 12345</p>" },
+      "https://example.com/": { body: '<a href="/features/">Features</a> <a href="/contact/">Contact</a> <a href="https://elsewhere.com/about">About them</a>' },
+    }),
+  });
+  assert.equal(rule(onContact, "impressum.web")[0]?.level, "ok");
+  assert.equal(rule(onContact, "impressum.web")[0]?.detail, "https://example.com/contact/");
+  const offSite = await checkListing("1234567890", { fetch: site({ "https://example.com/": { body: '<a href="https://elsewhere.com/impressum">Impressum</a>' }, "https://elsewhere.com/impressum": { body: "<p>Impressum HRB 1</p>" } }) });
+  assert.equal(rule(offSite, "impressum.web")[0]?.level, "ok", "a link labelled Impressum counts, wherever it points");
+  const contactElsewhere = await checkListing("1234567890", { fetch: site({ "https://example.com/": { body: '<a href="https://elsewhere.com/contact">Contact</a>' }, "https://elsewhere.com/contact": { body: "<p>HRB 1, Geschäftsführer X</p>" } }) });
+  assert.equal(rule(contactElsewhere, "impressum.web")[0]?.level, "warn", "only follows Contact/About links on the same site");
 });
 
 test("listing: the label must cover the SDKs the policy names", async () => {

@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import {
-  addAgentsNote, type AgentsNoteResult, appPrivacy, check, checklist, checklistSummary, checkOnline, CURRENT_VERSION, factsToYAML, initFacts, knowledgeBase, legalView,
+  addAgentsNote, type AgentsNoteResult, appPrivacy, check, checkListing, checklist, checklistSummary, checkOnline, CURRENT_VERSION, factsToYAML, initFacts, knowledgeBase, legalView,
   lookup, migrateFile, pageFiles, readFacts, scan, sdkCollects, sdkTracks, setTicks, type Finding,
 } from "./index.js";
 
@@ -277,6 +277,24 @@ export const TOOLS: Tool[] = [
         ...(e.notes ? [`Notes: ${e.notes}`] : []),
       ].join("\n");
       return { text, data: { found: true, entry: e as unknown as Json, collects, tracking: sdkTracks(e) } };
+    },
+  },
+  {
+    name: "listing",
+    title: "Check a live App Store listing",
+    description: "Check an app that is already on the App Store, without its repo: privacy policy and support page load, the policy has a contact and a date, EU trader details are complete, German/Austrian traders link an Impressum, and the App Privacy label covers the SDKs the policy names. Takes an App Store link or numeric ID. Read-only; fetches public pages.",
+    inputSchema: { type: "object", properties: { app: str("App Store link (apps.apple.com/…/id123456789) or numeric app ID.") }, required: ["app"] },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+    run: async (a) => {
+      let report;
+      try {
+        report = await checkListing(String(a.app ?? ""), { fetch, kb: knowledgeBase() });
+      } catch (e) {
+        throw new ToolError(e instanceof Error ? e.message : String(e));
+      }
+      const mark = { ok: "✓", warn: "!", error: "✗", info: "i" } as const;
+      const lines = report.findings.map((f) => `${mark[f.level]} ${f.title}${f.detail ? ` (${f.detail})` : ""}${f.level !== "ok" && f.fix ? `\n    ${f.fix}` : ""}`);
+      return { text: `${report.app.title} by ${report.app.seller}\n${lines.join("\n")}\n\n${report.passed} of ${report.total} checks pass.`, data: report as unknown as Json };
     },
   },
   {

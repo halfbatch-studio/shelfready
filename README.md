@@ -10,6 +10,8 @@ Try it in your app's repo, nothing to install:
 npx -y shelfready check
 ```
 
+Already on the App Store? Paste your link at **[shelfready.dev/check](https://shelfready.dev/check/)**.
+
 Website, the full checklist and what common SDKs collect: **[shelfready.dev](https://shelfready.dev)**
 
 ## Quick start
@@ -37,6 +39,7 @@ shelf checklist --online                      # what's left before you submit
 | `shelf check` | Drift between `shelfready.yaml` and the repo, missing manifests, placeholder permission texts, unknown SDKs, trader details, in-app Impressum. `--ci` exits 1 on errors, `--online` checks the published pages, `--format github` annotates pull requests |
 | `shelf checklist` | The go-live checklist: automatic items from `check`, manual ones you tick with `--done <id>`; `--markdown` writes it as a file |
 | `shelf migrate` | Updates `shelfready.yaml` to the current schema, keeping your comments and style |
+| `shelf listing` | Checks an app that's already live, from its App Store link alone: privacy policy and support page load, the policy has a contact and a date, EU trader details, an Impressum for German and Austrian traders, and whether the privacy label covers the SDKs the policy names. Also on the web at [shelfready.dev/check](https://shelfready.dev/check/) |
 | `shelf agents` | Adds a short note to `AGENTS.md` (or `CLAUDE.md`) so coding agents in the repo run the checks before a release; `shelf init` offers it |
 | `shelf mcp` | Runs the MCP server on stdio, so Claude and other agents can use all of the above |
 
@@ -69,7 +72,7 @@ codex mcp add shelfready -- npx -y shelfready mcp
 }
 ```
 
-Tools: `scan`, `init`, `check`, `checklist`, `tick`, `pages`, `app_privacy`, `sdk_info`, `migrate`. Each takes `path`, the app repo, and only ever writes inside it. The server is listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.halfbatch-studio/shelfready`.
+Tools: `scan`, `init`, `check`, `checklist`, `tick`, `pages`, `app_privacy`, `listing`, `sdk_info`, `migrate`. Each takes `path`, the app repo, and only ever writes inside it. The server is listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.halfbatch-studio/shelfready`.
 
 The skill, [`plugin/skills/shelfready/SKILL.md`](plugin/skills/shelfready/SKILL.md), follows the open Agent Skills format: copy the folder into any agent that reads skills, or upload it to claude.ai.
 

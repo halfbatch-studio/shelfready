@@ -23,6 +23,7 @@ Without them, use the CLI, which does the same: `npx -y shelfready <command>` (o
 | Checklist | `checklist`, `tick` | `shelf checklist [--done id,id]` |
 | An SDK | `sdk_info` | — |
 | Old schema | `migrate` | `shelf migrate` |
+| A live listing, no repo | `listing` | `shelf listing <App Store link>` |
 
 ## Workflow
 
